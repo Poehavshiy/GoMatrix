@@ -3,7 +3,7 @@
 
 int main() {
     ifstream myfile;
-    myfile.open("/home/nikita/ClionProjects/TP/algoritms/GoMatrix/txtMzfk.txt");
+    myfile.open("/home/nikita/ClionProjects/TP/algoritms/GoMatrix/testSetChip.txt");
     GoMatrix A(5, 5, 3);
     A.show();
     int step = 0;
@@ -16,7 +16,7 @@ int main() {
         A.show();
         cout << endl;
     }
-    A.buildContur(1, 1);
+    //A.buildContur(1, 1);
     A.show();
     myfile.close();
     return 0;

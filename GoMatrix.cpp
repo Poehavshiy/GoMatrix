@@ -18,11 +18,15 @@ GoMatrix::GoMatrix() {
     ySize = 19;
     numOfPlayers = 2;//на 2 игроков
     playersScore = new int[numOfPlayers];//выделение массива очков на 2 игроков
-    teamCounters = new int[numOfPlayers];//выделение массива счетчиков
-    //и его инициализация
+    //и массива контуров
+//    playersConturs=new vector<Contur>[numOfPlayers];
+    playersConturs.resize(numOfPlayers);
+    //и их инициализация
+    /* for(int i=0; i<numOfPlayers; i++) {
+         playersConturs[i].resize(10);
+     }*/
     for (int i = 0; i < numOfPlayers; i++) {
         playersScore[i] = 0;
-        teamCounters[i] = 0;
     }
     //+2 выделяется для создания вспомогательных граничных элементов
     matrix = new Field *[ySize + 2];
@@ -39,11 +43,14 @@ GoMatrix::GoMatrix(int X, int Y, int NPlayers) {
     ySize = Y;
     numOfPlayers = NPlayers;//на 2 игроков
     playersScore = new int[numOfPlayers];//выделение массива очков на numOfPlayers игроков
-    teamCounters = new int[numOfPlayers];//выделение массива счетчиков
     //и его инициализация
+    // playersConturs=new vector<Contur>[numOfPlayers];
+    playersConturs.resize(numOfPlayers);
+    /*for(int i=0; i<numOfPlayers; i++) {
+        playersConturs[i].resize(10);
+    }*/
     for (int i = 0; i < numOfPlayers; i++) {
         playersScore[i] = 0;
-        teamCounters[i] = 0;
     }
     //+2 выделяется для создания вспомогательных граничных элементов
     matrix = new Field *[ySize + 2];
@@ -60,31 +67,15 @@ GoMatrix::~GoMatrix() {
     }
     delete matrix;
     delete playersScore;
-    delete[] teamCounters;
+//    delete[] playersConturs;
 }
 
 //y-строка->1й индекс x-столбец->2й индекс
 void GoMatrix::setChip(int y, int x, int team) {
     int realX = x + 1;
     int realY = y + 1;
-    matrix[realY][realX].setTeam(team);
-    //теперь проверим, есть ли такие же фишки в 8-окресности
-    int *neighboors = checkNeighboors(realY, realX, team);
-    if (neighboors[4] == 0) {//если таких же нет
-        cout << endl << "Nothing in neig" << endl;
-        teamCounters[team]++;//увеличить счетчик связных областей занятых фишками iй команды
-        matrix[realY][realX].setLabel(teamCounters[team]);//и присвоить этот новый лэйбл
-    }
-    else {
-        //если такие же есть
-        //если такая же фишка в окресности только одного типа
-        //присоединим вставляемую фишку к имеющимуся контуру
-        if (neighboors[4] == 1) {
-            matrix[realY][realX].setLabel(neighboors[0]);
-        }
-        else matrix[realY][realX].setLabel(mergeSets(neighboors, team));
-    }
-    delete[] neighboors;
+    vector<int> information = renewMatrix(realY, realX, team);
+    int i = 0;
 }
 
 
@@ -184,11 +175,13 @@ YX GoMatrix::getNeighboor(int y, int x, int pos) {
 
 int GoMatrix::mergeSets(int *neighboors, int team) {
     //найдем самый маленький лэйбл
-    int leastLabel = neighboors[0];
-    for (int i = 0; i < neighboors[4]; i++) {
+    int leastLabel = neighboors[0];//к этому лэйблу все и будет приведено
+    for (int i = 0; i < neighboors[4]; i++) {//neighboors[4] содержит количество разных лэйблов по соседству
         if (neighboors[i] < leastLabel) leastLabel = neighboors[i];
     }
     //теперь всем контурам этой команды, что лежат в neighboors присвоим leastLabel
+    //для этого увы и ах придется пройти по всей матрице и экзаменовать каждый элемент
+    //возможно я и придумаю что нибудь лучше в последствии
     for (int i = 1; i < ySize + 1; i++) {
         for (int j = 1; j < xSize + 1; j++) {
             bool needToreset = false;
@@ -238,4 +231,54 @@ YX GoMatrix::getNextSameUclock(int y, int x) {
         }
     }
     return YX(-1, -1);//если уж совсем ничего не нашли
+}
+
+//эта функция обновляет поля глобальной матрицы
+// и возвращает информацию о произведенных преобразованиях
+vector<int> GoMatrix::renewMatrix(int realY, int realX, int team) {
+    //Очень хитрый вектор информации о произошедшем
+    /* 0-новый создался контур или же фишка была добавлена к существующему 0/1
+     в этом случае больше ничего не добавляется в information так как он был несложно обновлен
+     * 1-добавленая фишка была присоединена к чему то или смержила 0/1
+     * 2-номер 1го контура, в случае если предъидущтй пункт 0-это последние поле вектора information
+     * 3-номер 2го контура
+     * 4-номер 3го контура
+     * 5-номер 4го контура
+     * в случае мержа 2 и более +1 поле-отвечает за номер контура, к которому все было приведено*/
+    vector<int> information;
+    matrix[realY][realX].setTeam(team);
+    //теперь проверим, есть ли такие же фишки в 8-окресности
+    int *neighboors = checkNeighboors(realY, realX, team);
+    if (neighboors[4] == 0) {//если таких же нет
+        cout << endl << "Nothing in neig" << endl;//для дебага
+        Contur newContur(this, realY, realX);//создаем новый контур
+        playersConturs[team - 1].push_back(newContur);//и пушим его в вектор контуров команды team
+        //очевидно что контур с iм номером занимает iю позицию в векторе контуров для team команды
+        matrix[realY][realX].setLabel(playersConturs[team - 1].size());//и присвоить этот новый лэйбл
+        information.push_back(0);//обновим и вернем инфу о произошедшем
+    }
+    else {
+        //если такие же есть
+        //если такая же фишка в окресности только одного типа
+        //присоединим вставляемую фишку к имеющимуся контуру
+        if (neighboors[4] == 1) {
+            matrix[realY][realX].setLabel(neighboors[0]);
+            //в таком случае составим вектор информации в соответствии с его описанием
+            information.push_back(1);//фишка была добавлена к существующему
+            information.push_back(0);//фишка была добавлена без мержа
+            information.push_back(neighboors[0]);//контур к которому была добавлена фишка
+        }
+        else {
+            int labelToset = mergeSets(neighboors, team);//лэйбл к которому все приведется
+            matrix[realY][realX].setLabel(labelToset);//его то мы и поставили
+            information.push_back(1);//фишка была добавлена к существующему
+            information.push_back(1);//фишка была добавлена с мержем
+            for (int i = 0; i < neighboors[4]; i++) {//последовательно добавляем лэйблы
+                information.push_back(neighboors[i]);//в вектор инфы
+            }
+            information.push_back(labelToset);//последним добавляется номер лэйбла, к которому мы все привели
+        }
+    }
+    delete[] neighboors;
+    return information;
 }

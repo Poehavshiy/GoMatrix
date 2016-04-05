@@ -3,5 +3,5 @@ project(GoMatrix)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 
-set(SOURCE_FILES main.cpp GoMatrix.h GoMatrix.cpp)
+set(SOURCE_FILES main.cpp GoMatrix.h GoMatrix.cpp Contur.h Contur.cpp helpingClasses.h)
 add_executable(GoMatrix ${SOURCE_FILES})
