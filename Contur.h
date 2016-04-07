@@ -14,6 +14,7 @@ class Contur {
     GoMatrix *parent;
     bool closed;
     vector<YX> content;
+    YX start;
 public:
     Contur();
 
@@ -30,6 +31,15 @@ public:
     bool isClosed() { return closed; }
 
     void add(int y, int x) { content.push_back(YX(y, x)); }
+
+    void buildContur(int conturToAssign);
+
+    void freeContur();
+
+    void setStart(int y, int x) {
+        start = YX(y, x);
+    }
+
 
 };
 

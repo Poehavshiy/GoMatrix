@@ -11,6 +11,8 @@
 
 class GoMatrix {
 public:
+    friend class Contur;
+
     GoMatrix();
 
     GoMatrix(int X, int Y, int NPlayers);
@@ -21,7 +23,7 @@ public:
 
     void setChip(int y, int x, int team);
 
-    void buildContur(int startY, int startX);
+    Field &getField(int y, int x);
 
 
 private:
@@ -34,7 +36,8 @@ private:
     int numOfPlayers;
     //количество игроков
     int *playersScore;
-    //Массив содержащий векторы котуров для каждого игрока
+    //Вектор содержащий векторы котуров для каждого игрока
+    //Внешний вектор-вектор команд, вложенный вектор-контуры каждой команды
     vector<vector<Contur>> playersConturs;
     //приватные функции
     void initBoundary();
@@ -55,8 +58,10 @@ private:
     YX getNextSameUclock(int y, int x);
 
     //хитрые функции, исполняемые по команде setChip()
+    //эта обновляет поля матрицы непосредственно
     vector<int> renewMatrix(int realY, int realX, int team);
     //
+    void renewConturs(const vector<int> &information, int team);
 
 };
 

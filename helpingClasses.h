@@ -13,11 +13,23 @@ struct YX {
     int y;
     int x;
 
+    YX() : y(-1), x(-1) { }
+
     YX(int Y, int X) : y(Y), x(X) { }
+
+    void set(int y, int x) {
+        y = y;
+        x = x;
+    }
 
     bool operator!=(YX &left) {
         if (y == left.y && x == left.x) return false;
         else return true;
+    }
+
+    bool operator==(YX &left) {
+        if (y == left.y && x == left.x) return true;
+        else return false;
     }
 
     ~YX() { }
@@ -36,8 +48,9 @@ class Field {
     // указывает на пренадлежность данного поля
     //определенной команде, либо границе игровой зоны, либо пустому полю
     int team;
-    //
-    bool contur;
+    // int он потому что в процессе нахождения замкнутых контуров
+    //это число будет показывать, сколько раз через него прошел "жук"
+    int contur;
 public:
     Field() {
         label = 0;
@@ -65,11 +78,14 @@ public:
 
     void setTeam(int inc) { team = inc; }
 
-    bool isContur() { return contur; }
+    int getContur() { return contur; }
 
-    void setContur(bool inc) { contur = inc; }
+    void setContur(int inc) { contur = inc; }
 
+    void incrContur() { contur++; }
 
 };
+
+// простой поиск элемента в контэйнере с какой то начальной позиции и возвращаем индес
 
 #endif //GOMATRIX_HELPINGCLASSES_H

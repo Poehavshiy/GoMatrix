@@ -12,6 +12,13 @@ int* playersScore;//очки iго игрока
 
 #include "GoMatrix.h"
 
+int isIncluded(int start, vector<int> collection, const int &target) {
+    for (int i = start; i < collection.size(); i++) {
+        if (target == collection[i]) return i;
+    }
+    return 0;
+}
+
 //конструктор по умолчанию
 GoMatrix::GoMatrix() {
     xSize = 19;//стандартный размер для игры в Go 19х19
@@ -20,7 +27,7 @@ GoMatrix::GoMatrix() {
     playersScore = new int[numOfPlayers];//выделение массива очков на 2 игроков
     //и массива контуров
 //    playersConturs=new vector<Contur>[numOfPlayers];
-    playersConturs.resize(numOfPlayers);
+    playersConturs.resize(numOfPlayers + 1);
     //и их инициализация
     /* for(int i=0; i<numOfPlayers; i++) {
          playersConturs[i].resize(10);
@@ -45,10 +52,11 @@ GoMatrix::GoMatrix(int X, int Y, int NPlayers) {
     playersScore = new int[numOfPlayers];//выделение массива очков на numOfPlayers игроков
     //и его инициализация
     // playersConturs=new vector<Contur>[numOfPlayers];
-    playersConturs.resize(numOfPlayers);
-    /*for(int i=0; i<numOfPlayers; i++) {
-        playersConturs[i].resize(10);
-    }*/
+    playersConturs.resize(numOfPlayers + 1);
+    for (int i = 0; i < numOfPlayers; i++) {
+        Contur helpContur(this, -1, -1);
+        playersConturs[i].push_back(helpContur);
+    }
     for (int i = 0; i < numOfPlayers; i++) {
         playersScore[i] = 0;
     }
@@ -75,7 +83,8 @@ void GoMatrix::setChip(int y, int x, int team) {
     int realX = x + 1;
     int realY = y + 1;
     vector<int> information = renewMatrix(realY, realX, team);
-    int i = 0;
+    renewConturs(information, team);
+
 }
 
 
@@ -86,7 +95,7 @@ void GoMatrix::show() {
             cout << matrix[i][j].getTeam() << "/";
             if (matrix[i][j].getLabel() != -1) cout << ' ';
             cout << matrix[i][j].getLabel() << '/';
-            cout << matrix[i][j].isContur() << "  ";
+            cout << matrix[i][j].getContur() << "  ";
         }
         cout << endl;
     }
@@ -197,40 +206,34 @@ int GoMatrix::mergeSets(int *neighboors, int team) {
     return leastLabel;
 }
 
-//
-void GoMatrix::buildContur(int startY, int startX) {
-    YX start(startY, startX);
-    YX current(startY, startX);
-    //matrix[startY][startX].setContur(true);
-    current = getNextSameUclock(current.y, current.x);
-    matrix[current.y][current.x].setContur(true);
-    while (current != start) {
-        current = getNextSameUclock(current.y, current.x);
-        matrix[current.y][current.x].setContur(true);
-    }
-}
-
-//
+//Гипер важная функция которая является ключевой для построения замкнутых контуров
 YX GoMatrix::getNextSameUclock(int y, int x) {
     Field *income = &matrix[y][x];
+    YX resultID;
     for (int i = 0; i < 8; i++) {
-        YX curID = getNeighboor(y, x, i);
-        Field *current = &matrix[curID.y][curID.x];
-        if (current->getTeam() == income->getTeam() && current->getLabel() == income->getLabel()
-            && current->isContur() == false) {
-            return curID;
+        YX currentID = getNeighboor(y, x, i);
+        Field *current = &matrix[currentID.y][currentID.x];
+        /*идем по окрестности находя туто первый попавшийся с таким же лэйблом и командой  */
+        if (current->getTeam() == income->getTeam() && current->getLabel() == income->getLabel()) {
+            resultID = currentID;
+            break;
         }
     }
-    //еслм все обыскали и не нашли вернем элемент, являющийся контуром
+    //все ниже описанное является поиском элемента такого же команды/лэйбла
+    //c наименьшим значением параметра contur
     for (int i = 0; i < 8; i++) {
-        YX curID = getNeighboor(y, x, i);
-        Field *current = &matrix[curID.y][curID.x];
-        if (current->getTeam() == income->getTeam() && current->getLabel() == income->getLabel()
-            /*&& current->isContur() == false*/) {//на последнее условие теперь забьем
-            return curID;
+        YX currentID = getNeighboor(y, x, i);
+        Field *current = &matrix[currentID.y][currentID.x];
+        /*идем по окрестности отбирая только те точки, у которых совпадает команда и лэйбл  */
+        if (current->getTeam() == income->getTeam() && current->getLabel() == income->getLabel()) {
+            //если у вновь отобраной точки количество прохождений через нее меньше чем у результата
+            //переприсвоим результат
+            if (current->getContur() < matrix[resultID.y][resultID.x].getContur()) {
+                resultID = currentID;
+            }
         }
     }
-    return YX(-1, -1);//если уж совсем ничего не нашли
+    return resultID;
 }
 
 //эта функция обновляет поля глобальной матрицы
@@ -252,9 +255,12 @@ vector<int> GoMatrix::renewMatrix(int realY, int realX, int team) {
     if (neighboors[4] == 0) {//если таких же нет
         cout << endl << "Nothing in neig" << endl;//для дебага
         Contur newContur(this, realY, realX);//создаем новый контур
-        playersConturs[team - 1].push_back(newContur);//и пушим его в вектор контуров команды team
+        newContur.setStart(realY, realX);//выдаем ему стартовую точку
+        playersConturs[team].push_back(newContur);//и пушим его в вектор контуров команды team
+        matrix[realY][realX].setContur(playersConturs[team].size() - 1);
         //очевидно что контур с iм номером занимает iю позицию в векторе контуров для team команды
-        matrix[realY][realX].setLabel(playersConturs[team - 1].size());//и присвоить этот новый лэйбл
+        //-1 потому что там лежит еще вспомогательный элемент
+        matrix[realY][realX].setLabel(playersConturs[team].size() - 1);//и присвоить этот новый лэйбл
         information.push_back(0);//обновим и вернем инфу о произошедшем
     }
     else {
@@ -281,4 +287,34 @@ vector<int> GoMatrix::renewMatrix(int realY, int realX, int team) {
     }
     delete[] neighboors;
     return information;
+}
+
+//эта функция принимает вектор информации о вставке фишке из renewMatrix и обновляет контура
+void GoMatrix::renewConturs(const vector<int> &information, int team) {
+    //есди контур был создан заново то ничего делать не надо
+    if (information[0] == 0) {
+        return;
+    }
+        //если фишка была добавлена к существующему, просто перестроить тот контур, к которому ее добавили
+    else if (information[0] == 1 && information[1] == 0) {
+        playersConturs[team][information[2]].buildContur(information[2]);
+    }
+        //если контуры были смержены то нужно удалить все контуры из вектора контуров этой команды
+        // , которые есть в векторе information кроме того, к которому привели
+    else if (information[0] == 1 && information[1] == 1) {
+        //начинаем с одного, потому что в 0м лежит вспомогательный несуществующий элемент для нумерации
+        for (int i = playersConturs[team].size(); i > 0; i--) {
+            //если iй индекс содержится в векторе информации и он не равен тому, к чему мы все привели
+            if (isIncluded(2, information, i) != 0 && i != information.back()) {
+                playersConturs[team][i].freeContur();
+                playersConturs[team].erase(playersConturs[team].begin() + i);
+            }
+        }
+        //ну и перестроим контур с которым мы все смержили
+        playersConturs[team][information.back()].buildContur(information.back());
+    }
+}
+
+Field &GoMatrix::getField(int y, int x) {
+    return matrix[y][x];
 }
