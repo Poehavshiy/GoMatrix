@@ -13,7 +13,7 @@ struct YX {
     int y;
     int x;
 
-    YX() : y(-1), x(-1) { }
+    YX() : y(-150), x(-150) { }
 
     YX(int Y, int X) : y(Y), x(X) { }
 
@@ -53,15 +53,15 @@ class Field {
     int contur;
 public:
     Field() {
-        label = 0;
-        team = 0;
-        contur = 0;
+        label = -1;
+        team = -1;
+        contur = -1;
     }
 
     Field(int &incLabel, int &incTeam) {
         label = incLabel;
         team = incTeam;
-        contur = 0;
+        contur = -1;
     }
 
     //простецкий интерфейс
@@ -83,6 +83,17 @@ public:
     void setContur(int inc) { contur = inc; }
 
     void incrContur() { contur++; }
+
+    friend ostream &operator<<(ostream &os, const Field &dt) {
+        if (dt.team > -1) os << ' ';
+        os << dt.team;
+        if (dt.label > -1) os << ' ';
+        os << dt.label;
+        if (dt.contur > -1) os << ' ';
+        os << dt.contur;
+        return os;
+    }
+
 
 };
 

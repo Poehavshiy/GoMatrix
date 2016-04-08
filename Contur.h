@@ -40,6 +40,8 @@ public:
         start = YX(y, x);
     }
 
+    YX nextStep(int y, int x);
+
 
 };
 
